@@ -1,10 +1,10 @@
 {
-  "name": "giit-pulse",
+  "name": "lenear",
   "version": "1.0.0",
-  "description": "AI-powered terminal code reviewer for your staged git diffs, powered by Groq.",
+  "description": "Lenear — AI-powered terminal code reviewer (Nvidia + Groq) with project workspaces.",
   "type": "module",
   "bin": {
-    "gitpulse": "dist/cli.js"
+    "lenear": "dist/cli.js"
   },
   "main": "dist/cli.js",
   "files": [
@@ -24,6 +24,7 @@
     "git",
     "code-review",
     "ai",
+    "nvidia",
     "groq",
     "llm",
     "developer-tools",
@@ -31,16 +32,18 @@
     "pre-push",
     "devtools"
   ],
-  "author": "Your Name <you@example.com>",
+  "author": "Lenear Contributors",
   "license": "MIT",
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "@clack/prompts": "^1.8.1",
     "boxen": "^7.1.1",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
     "groq-sdk": "^0.7.0",
+    "openai": "^7.15.0",
     "ora": "^8.0.1",
     "simple-git": "^3.25.0"
   },

@@ -1,4 +1,6 @@
 import Groq from 'groq-sdk';
+import OpenAI from 'openai';
+import { getGlobalConfig } from './storage.js';
 
 export type Severity = 'critical' | 'warning' | 'info';
 
@@ -22,15 +24,24 @@ export interface ReviewResult {
 export interface ReviewOptions {
   model: string;
   language?: string;
+  provider?: 'nvidia' | 'groq';
 }
 
-const MISSING_KEY_MESSAGE =
-  'Missing GROQ_API_KEY. Get your free key at https://console.groq.com';
+const MISSING_NV_KEY =
+  'Missing NVIDIA_API_KEY. Set via `lenear config set nvidiaApiKey <key>` or env NVIDIA_API_KEY. Get one at https://build.nvidia.com';
+const MISSING_GROQ_KEY =
+  'Missing GROQ_API_KEY. Set via `lenear config set groqApiKey <key>` or env GROQ_API_KEY. Get one at https://console.groq.com';
 
-function getClient(): Groq {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error(MISSING_KEY_MESSAGE);
-  return new Groq({ apiKey });
+function resolveApiKey(provider: 'nvidia' | 'groq'): string {
+  const global = getGlobalConfig();
+  if (provider === 'nvidia') {
+    const key = global.nvidiaApiKey ?? process.env.NVIDIA_API_KEY ?? process.env.NIM_API_KEY;
+    if (!key) throw new Error(MISSING_NV_KEY);
+    return key;
+  }
+  const key = global.groqApiKey ?? process.env.GROQ_API_KEY;
+  if (!key) throw new Error(MISSING_GROQ_KEY);
+  return key;
 }
 
 const SYSTEM_PROMPT = `You are a senior staff software engineer performing a rigorous code review.
@@ -125,33 +136,48 @@ function validateReview(value: unknown): ReviewResult {
   };
 }
 
-export async function reviewDiff(
-  diff: string,
-  options: ReviewOptions,
-): Promise<ReviewResult> {
-  const groq = getClient();
-  const languageHint = options.language && options.language !== 'auto'
-    ? `\nPrimary language: ${options.language}.`
-    : '';
+export async function reviewDiff(diff: string, options: ReviewOptions): Promise<ReviewResult> {
+  const provider = options.provider ?? getGlobalConfig().provider ?? 'nvidia';
+  const apiKey = resolveApiKey(provider);
+  const languageHint =
+    options.language && options.language !== 'auto' ? `\nPrimary language: ${options.language}.` : '';
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: options.model,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT + languageHint },
-        {
-          role: 'user',
-          content: `Review the following git diff and return JSON only.\n\n${diff}`,
-        },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.2,
-      max_tokens: 2048,
-    });
+    let content: string | null | undefined;
 
-    const content = completion.choices[0]?.message?.content;
+    if (provider === 'nvidia') {
+      const openai = new OpenAI({
+        apiKey,
+        baseURL: 'https://integrate.api.nvidia.com/v1',
+      });
+      const completion = await openai.chat.completions.create({
+        model: options.model,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT + languageHint },
+          { role: 'user', content: `Review the following git diff and return JSON only.\n\n${diff}` },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
+        max_tokens: 2048,
+      });
+      content = completion.choices[0]?.message?.content;
+    } else {
+      const groq = new Groq({ apiKey });
+      const completion = await groq.chat.completions.create({
+        model: options.model,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT + languageHint },
+          { role: 'user', content: `Review the following git diff and return JSON only.\n\n${diff}` },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
+        max_tokens: 2048,
+      });
+      content = completion.choices[0]?.message?.content;
+    }
+
     if (!content) {
-      throw new Error('Groq returned an empty response.');
+      throw new Error(`${provider} returned an empty response.`);
     }
 
     let parsed: unknown;
@@ -169,9 +195,19 @@ export async function reviewDiff(
   }
 }
 
-export async function listModels(): Promise<string[]> {
-  const groq = getClient();
+export async function listModels(provider: 'nvidia' | 'groq' = 'nvidia'): Promise<string[]> {
+  const apiKey = resolveApiKey(provider);
   try {
+    if (provider === 'nvidia') {
+      const openai = new OpenAI({ apiKey, baseURL: 'https://integrate.api.nvidia.com/v1' });
+      const res = await openai.models.list();
+      const data = (res as { data?: Array<{ id?: string }> }).data ?? [];
+      return data
+        .map((m) => m.id)
+        .filter((id): id is string => typeof id === 'string')
+        .sort();
+    }
+    const groq = new Groq({ apiKey });
     const res = await groq.models.list();
     const data = (res as { data?: Array<{ id?: string }> }).data ?? [];
     return data

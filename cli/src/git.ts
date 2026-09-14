@@ -15,9 +15,7 @@ export async function isGitRepo(): Promise<boolean> {
 
 async function ensureRepo(): Promise<void> {
   if (!(await isGitRepo())) {
-    throw new Error(
-      'Not a git repository. Run gitpulse inside a git project.',
-    );
+    throw new Error('Not a git repository. Run lenear inside a git project.');
   }
 }
 
@@ -26,15 +24,59 @@ export async function getStagedDiff(): Promise<string> {
   try {
     const diff = await client().diff(['--staged']);
     if (!diff.trim()) {
-      throw new Error(
-        'No staged changes found. Stage files with `git add` before running gitpulse review.',
-      );
+      throw new Error('No staged changes found. Stage files with `git add` before running lenear review.');
     }
     return diff;
   } catch (err) {
     if (err instanceof Error && err.message.startsWith('No staged')) throw err;
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Failed to read staged diff: ${msg}`);
+  }
+}
+
+export async function getUnstagedDiff(): Promise<string> {
+  await ensureRepo();
+  try {
+    const diff = await client().diff();
+    if (!diff.trim()) {
+      throw new Error('No unstaged changes found.');
+    }
+    return diff;
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('No unstaged')) throw err;
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to read unstaged diff: ${msg}`);
+  }
+}
+
+export async function getAllDiff(): Promise<string> {
+  await ensureRepo();
+  try {
+    const diff = await client().diff(['HEAD']);
+    if (!diff.trim()) {
+      throw new Error('No changes found (staged + unstaged empty).');
+    }
+    return diff;
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('No changes')) throw err;
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to read diff: ${msg}`);
+  }
+}
+
+export async function getFileDiffs(files: string[]): Promise<string> {
+  await ensureRepo();
+  if (files.length === 0) throw new Error('No files specified for review.');
+  try {
+    const diff = await client().diff(['HEAD', '--', ...files]);
+    if (!diff.trim()) {
+      throw new Error(`No changes found for: ${files.join(', ')}`);
+    }
+    return diff;
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('No changes')) throw err;
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to read file diffs: ${msg}`);
   }
 }
 
@@ -50,6 +92,16 @@ export async function getFullDiff(): Promise<string> {
     if (err instanceof Error && err.message.startsWith('No diff')) throw err;
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Failed to read full diff: ${msg}`);
+  }
+}
+
+export async function getUntrackedFiles(): Promise<string[]> {
+  await ensureRepo();
+  try {
+    const status = await client().status();
+    return status.not_added;
+  } catch {
+    return [];
   }
 }
 

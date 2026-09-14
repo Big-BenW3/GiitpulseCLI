@@ -38,7 +38,7 @@ function renderSection(
 
 export function renderReview(result: ReviewResult, repoName: string): void {
   const color = scoreColor(result.score);
-  const headerText = `${chalk.cyan.bold('gitpulse')} ${chalk.gray('•')} ${chalk.white(repoName)}   ${chalk.bold('Score:')} ${color(`${result.score}/100`)}`;
+  const headerText = `${chalk.cyan.bold('lenear')} ${chalk.gray('•')} ${chalk.white(repoName)}   ${chalk.bold('Score:')} ${color(`${result.score}/100`)}`;
 
   console.log(
     boxen(headerText, {
@@ -69,9 +69,7 @@ export function renderReview(result: ReviewResult, repoName: string): void {
     }
   }
 
-  console.log(
-    chalk.gray('⚡ Powered by Groq — Run `git push` to proceed or fix issues first'),
-  );
+  console.log(chalk.gray('⚡ Powered by Lenear'));
 }
 
 export function renderError(message: string): void {

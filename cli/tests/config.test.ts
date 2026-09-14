@@ -21,14 +21,14 @@ afterEach(() => {
 describe('getConfig', () => {
   it('returns defaults when .gitpulserc does not exist', () => {
     const cfg = getConfig();
-    expect(cfg.model).toBe('llama-3.3-70b-versatile');
+    expect(cfg.model).toBe('meta/llama-3.3-70b-instruct');
     expect(cfg.maxDiffLines).toBe(2000);
     expect(cfg.language).toBe('auto');
   });
 
   it('merges file values on top of defaults', () => {
     writeFileSync(
-      join(dir, '.gitpulserc'),
+      join(dir, '.lenearrc'),
       JSON.stringify({ model: 'custom-model' }),
     );
     const cfg = getConfig();
@@ -40,7 +40,7 @@ describe('getConfig', () => {
 describe('setConfig', () => {
   it('writes a string key to disk', () => {
     setConfig('model', 'mixtral-8x7b');
-    expect(existsSync(join(dir, '.gitpulserc'))).toBe(true);
+    expect(existsSync(join(dir, '.lenearrc'))).toBe(true);
     const cfg = getConfig();
     expect(cfg.model).toBe('mixtral-8x7b');
   });
@@ -62,7 +62,7 @@ describe('setConfig', () => {
   it('preserves other values when one is updated', () => {
     setConfig('model', 'a');
     setConfig('language', 'typescript');
-    const written = JSON.parse(readFileSync(join(dir, '.gitpulserc'), 'utf8'));
+    const written = JSON.parse(readFileSync(join(dir, '.lenearrc'), 'utf8'));
     expect(written.model).toBe('a');
     expect(written.language).toBe('typescript');
   });
