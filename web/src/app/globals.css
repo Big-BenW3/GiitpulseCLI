@@ -7,6 +7,8 @@
   --lenear-surface: #0a1424;
   --lenear-border: #172a42;
   --lenear-muted: #8b9ab0;
+  --lenear-lime: #dff57a;
+  --lenear-lime-soft: #eef9c2;
 }
 
 @theme inline {
@@ -16,6 +18,8 @@
   --color-lenear-surface: var(--lenear-surface);
   --color-lenear-border: var(--lenear-border);
   --color-lenear-muted: var(--lenear-muted);
+  --color-lenear-lime: var(--lenear-lime);
+  --color-lenear-lime-soft: var(--lenear-lime-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -40,8 +44,8 @@ code, pre {
 }
 
 ::selection {
-  background: var(--lenear-navy);
-  color: white;
+  background: var(--lenear-lime);
+  color: #050b14;
 }
 
 @media (prefers-reduced-motion: reduce) {
